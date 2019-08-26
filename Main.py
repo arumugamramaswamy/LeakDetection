@@ -123,7 +123,10 @@ def path_zero(graphmatrix):
                 beforedel = zeroconnection
 
             delduplicates(zeroconnection)
-
+    try:
+        zeroconnection[0] = 1
+    except:
+        zeroconnection = [1]
     return zeroconnection
 
 #calls path_zero and returns adjacency list
@@ -240,6 +243,10 @@ def cut_generator(graphmatrix):
 
 def del_from_graph(graphmatrix,n,water_system,count = 1):
 
+    if len(graphmatrix)==1:
+        print("previous edge has a leak")
+        return
+
     # first call of the recursive function
     if count==0:
         count =1
@@ -294,9 +301,9 @@ def del_from_graph(graphmatrix,n,water_system,count = 1):
             del_from_graph(graphmatrix,n,water_system)
         else:
             graphmatrix = graphmatrixdict["zeromat"]
+            temp=["x" for x in range(n)]
             cnt =0
             for x in labels[len(labels)-1]:
-                temp[x]="x"
                 for y in graphmatrixdict["zerolist"]:
                     if x == y:
                         temp[cnt]=(graphmatrixdict["zerolist"].index(y))

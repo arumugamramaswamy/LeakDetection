@@ -4,6 +4,7 @@ import networkx as nx
 from networkx.algorithms.community import kernighan_lin_bisection
 import numpy as np
 from operator import itemgetter
+from Front_end import front_end
 
 labels = []
 
@@ -44,7 +45,7 @@ class watersystem:
                     while keep_going:
                         keep_going = False
                         try:
-                            outflow = int(input("enter the outflow value for node "+str(x.name)))
+                            outflow = int(input("enter the outflow value for node "+str(int(x.name)+1)+" (inflow is -ve)"))
                             x.outflow_modify(outflow)
                         except:
                             keep_going = True
@@ -54,7 +55,7 @@ class watersystem:
                 while keep_going:
                     keep_going = False
                     try:
-                        outflow = int(input("enter the outflow value for node "+str(x.name)))
+                        outflow = int(input("enter the outflow value for node "+str(int(x.name)+1)+" (inflow is -ve)"))
                         x.outflow_modify(outflow)
                     except:
                         keep_going = True
@@ -64,10 +65,11 @@ class watersystem:
         while keep_going:
             keep_going = False
             try:
-                edge_flow = int(input("enter the flow between edges "+str(edge[0])+" and "+str(edge[1])+" (direction matters, if flow is opposite use a -ve sign)"))
+                edge_flow = int(input("enter the flow between nodes "+str(edge[0]+1)+" and "+str(edge[1]+1)+" (direction matters, if flow is opposite use a -ve sign)"))
                 self.edgeflow.append((edge,edge_flow))
             except:
-                keep_going = True        
+                keep_going = True
+        return edge_flow
         
 
 
@@ -236,7 +238,9 @@ def cut_generator(graphmatrix):
 
     return cut
 
-def del_from_graph(graphmatrix,n,count = 1):
+def del_from_graph(graphmatrix,n,water_system,count = 1):
+
+    # first call of the recursive function
     if count==0:
         count =1
         temp=[]
@@ -245,23 +249,38 @@ def del_from_graph(graphmatrix,n,count = 1):
             temp.append(x)
         labels.append(temp)
 
+    #check which cuts to make
     new_graphmatrix =graphmatrix
     print(np.array(new_graphmatrix))
     cuts= cut_generator(graphmatrix)
     print(cuts)
 
+    #begin making cuts
     for x in cuts:
         new_graphmatrix[x[0]][x[1]]= 0
         new_graphmatrix[x[1]][x[0]]= 0
     
+    #get edgeflow for cuts
+    for cut in cuts:
+        real_cut = (labels[-1].index(cut[0]),labels[-1].index(cut[1]))
+        edge_flow = water_system.get_edgeflow(real_cut)
+        water_system.nodes[real_cut[0]].outflow_modify(water_system.nodes[real_cut[0]].outflow+edge_flow)
+        water_system.nodes[real_cut[1]].outflow_modify(water_system.nodes[real_cut[1]].outflow-edge_flow)
+
+    #check whether graph has been completely segmented
     one_D_graphmatrix = []
     for x in range(len(graphmatrix)):
-        one_D_graphmatrix+=graphmatrix[x]
-
+        one_D_graphmatrix+=graphmatrix[x]        
+    
     if 1 in one_D_graphmatrix:
         graphmatrixdict = subgraph(new_graphmatrix)
+        tot=0
+        for x in range(len(graphmatrixdict["onelist"])):
+            node_cur = graphmatrixdict["onelist"][x]
+            real_node = labels[-1].index(node_cur)
+            tot += water_system.nodes[real_node].outflow
 
-        if True: #add direction here
+        if tot != 0: #add direction here
             graphmatrix = graphmatrixdict["onemat"]
             temp=["x" for x in range(n)]
             cnt = 0
@@ -272,7 +291,7 @@ def del_from_graph(graphmatrix,n,count = 1):
                         break
                 cnt+=1
             labels.append(temp)
-            del_from_graph(graphmatrix,n)
+            del_from_graph(graphmatrix,n,water_system)
         else:
             graphmatrix = graphmatrixdict["zeromat"]
             cnt =0
@@ -284,7 +303,7 @@ def del_from_graph(graphmatrix,n,count = 1):
                         break
                 cnt+=1
             labels.append(temp)
-            del_from_graph(graphmatrix,n)
+            del_from_graph(graphmatrix,n,water_system)
     else:
         print("all done")
         print(labels)
@@ -335,9 +354,13 @@ new_test_3 = [[0,0,1,0,0,0,0,1],
 ]
 
 
-del_from_graph(new_test_2,len(new_test_2),count = 0)
+#del_from_graph(new_test_2,len(new_test_2),count = 0)
 #inflow = [(0,1)]
-#water = watersystem(new_test_1,inflow_list=inflow)
+mat = front_end()
+water = watersystem(mat)
+water.get_outflows()
+del_from_graph(water.graph,len(water.graph),water,count =0)
+#water = watersystem(new_test_1)
 #water.get_edgeflow((0,1))
 #water.get_outflows()
 
